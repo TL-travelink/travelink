@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.travelink.board.mapper.BoardMapper">
+
+  <resultMap id="board" type="boardDto">
+    <result column="member_id" property="memberId"/>
+    <result column="title" property="title"/>
+    <result column="content" property="content"/>
+    <result column="status" property="status"/>
+  </resultMap>
+
+  <resultMap id="boardResult" type="boardDto">
+    <result column="id" property="boardId" />
+    <result column="member_id" property="memberId"/>
+    <result column="title" property="title"/>
+    <result column="content" property="content"/>
+    <result column="status" property="status"/>
+    <result column="hit" property="hit"/>
+    <result column="like_count" property="likeCount"/>
+    <result column="report_count" property="reportCount"/>
+    <result column="create_at" property="createAt"/>
+    <collection property="commentList" ofType="commentDto" column="id" select="selectCommentsByBoardId"/>
+    <collection property="fileInfo" ofType="boardFileInfoDto" column="id" select="selectFileInfoByBoardId"/>
+  </resultMap>
+
+  <resultMap id="fileInfo" type="boardFileInfoDto">
+    <result column="id" property="id"/>
+    <result column="board_id" property="boardId"/>
+    <result column="save_folder" property="saveFolder"/>
+    <result column="original_file" property="originalFile"/>
+    <result column="save_file" property="saveFile"/>
+
+  </resultMap>
+
+  <resultMap id="commentList" type="commentDto">
+    <result column="id" property="id"/>
+    <result column="board_id" property="boardId"/>
+    <result column="member_id" property="memberId"/>
+    <result column="content" property="content"/>
+    <result column="create_at" property="createAt"/>
+  </resultMap>
+
+  <select id="selectFileInfoByBoardId" parameterType="int" resultMap="fileInfo">
+    select id, board_id, save_folder, original_file, save_file
+    from board_file_info
+    where board_id=#{board_id}
+  </select>
+
+  <select id="selectCommentsByBoardId" parameterType="int" resultMap="commentList">
+    select id, board_id, member_id, content, create_at
+    from comment
+    where board_id=#{boardId}
+  </select>
+
+  <select id="listBoard" resultMap="boardResult">
+    select id, member_id, title, content, status, hit, like_count, report_count, create_at
+    from board;
+  </select>
+
+  <select id="getBoard" parameterType="int" resultMap="boardResult">
+    select id, member_id, title, content, status, hit, like_count, report_count, create_at
+    from board
+    where id=#{boardId}
+  </select>
+
+  <insert id="createBoard" parameterType="boardCreateRequest" useGeneratedKeys="true" keyProperty="boardId">
+    insert into board (member_id, title, content, status)
+    values (#{memberId}, #{title}, #{content}, #{status})
+  </insert>
+
+  <update id="modifyBoard" parameterType="boardModifyRequest">
+    UPDATE board
+    SET title = #{title}, content = #{content}
+    WHERE id = #{boardId}
+  </update>
+
+  <delete id="deleteBoard" parameterType="int">
+    delete from board
+    where id=#{boardId}
+  </delete>
+
+  <select id="listMatchingBoard">
+    select *
+    from board b
+            join matching_board mb
+            on b.id = mb.board_id;
+  </select>
+
+  <select id="getMatchingBoard">
+    select *
+    from board b
+        join matching_board mb
+        on b.id = mb.board_id
+    where b.id=#{boardId}
+  </select>
+
+  <insert id="createMatchingBoard" parameterType="matchingBoardCreateRequest">
+    insert into matching_board (category, board_id)
+    values (#{category}, #{boardId})
+  </insert>
+
+  <update id="modifyMatchingBoard" parameterType="matchingBoardModifyRequest">
+    update matching_board
+    set category = #{category}
+    where board_id = #{boardId};
+  </update>
+
+  <delete id="deleteMatchingBoard" parameterType="int">
+    delete from board
+    where id=#{boardId}
+  </delete>
+
+  <insert id="insertLike" parameterType="likeDto">
+     insert into `like`(member_id, board_id)
+     value (#{memberId}, #{boardId})
+  </insert>
+
+  <delete id="deleteLike" parameterType="likeDto">
+    delete from `like`
+    where board_id=#{boardId} and member_id=#{memberId}
+  </delete>
+
+  <select id="likeCount" parameterType="likeDto">
+    select count(*)
+    from `like`
+    where board_id = #{boardId} and member_id = #{memberId}
+  </select>
+
+  <update id="updateBoardLike" parameterType="updateBoardLikeDto">
+    update `board`
+    set like_count = like_count + #{status}
+    where id = #{boardId}
+  </update>
+
+  <insert id="createComment" parameterType="commentDto">
+    insert into `comment`(board_id, member_id, content)
+    value (#{boardId}, #{memberId}, #{content})
+  </insert>
+
+  <delete id="deleteComment" parameterType="int">
+    delete from comment
+    where id = #{commentId}
+  </delete>
+
+  <update id="modifyComment" parameterType="commentModifyRequest">
+    update `comment`
+    set content = #{content}
+    where id=#{commentId}
+  </update>
+
+  <insert id="registerFile" parameterType="boardCreateRequest">
+    insert into `board_file_info` (board_id, save_folder, original_file, save_file)
+    value (#{boardId}, #{fileInfo.saveFolder}, #{fileInfo.originalFile}, #{fileInfo.saveFile})
+  </insert>
+
+  <select id="getHotBoard" resultMap="boardResult">
+    select id, member_id, title, content, status, hit, like_count, report_count, create_at
+    from board
+    order by like_count desc
+    limit 3;
+  </select>
+</mapper>

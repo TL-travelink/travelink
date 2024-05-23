@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.travelink.travel.mapper.TravelMapper">
+
+  <resultMap id="travel" type="travelSearchResponse">
+    <result column="content_id" property="contentId"/>
+    <result column="content_type_id" property="contentType"/>
+    <result column="title" property="title"/>
+    <result column="addr1" property="addr1"/>
+    <result column="addr2" property="addr2"/>
+    <result column="first_image" property="firstImage"/>
+    <result column="latitude" property="mapY"/>
+    <result column="longitude" property="mapX"/>
+  </resultMap>
+
+  <select id="getGugun" resultType="String">
+    select gugun_name
+    from gugun
+    where sido_code = #{areaCode}
+  </select>
+
+  <select id="search" parameterType="travelSearchRequest" resultMap="travel">
+    select content_id,
+           content_type_id,
+           title,
+           addr1,
+           addr2,
+           first_image,
+           latitude,
+           longitude
+    from attraction_info
+    where sido_code = #{areaCode}
+      and gugun_code = #{gugun}
+      and content_type_id = #{contentTypeId}
+      and title LIKE CONCAT('%', #{keyword}, '%')
+  </select>
+
+  <select id="getDetail" parameterType="Int" resultType="String">
+    select overview
+    from attraction_description
+    where content_id = #{contentId}
+  </select>
+
+  <insert id="addInfo" parameterType="travelInfoRequest">
+    insert into attraction_info (content_id, title, addr1, addr2, first_image, latitude, longitude)
+    values (#{contentId}, #{title}, #{addr1}, #{addr2}, #{firstImage}, #{mapY}, #{mapX});
+  </insert>
+
+  <insert id="addSchedule" parameterType="scheduleRequest">
+    <!-- travel_board에 데이터 삽입 -->
+    INSERT INTO travel_board (title, start_at, end_at,member_id, visibility)
+    VALUES (#{title}, #{startDate}, #{endDate}, #{memberId}, #{visibility});
+
+    <!-- 자동 증가 키를 가져와서 generatedId에 저장 -->
+    <selectKey keyProperty="generatedId" resultType="int" order="AFTER">
+      SELECT LAST_INSERT_ID();
+    </selectKey>
+  </insert>
+  <!-- matching_board에 데이터 삽입 -->
+
+  <insert id="addScheduleWithTravels" parameterType="scheduleRequest">
+    INSERT INTO matching_board (category_id, board_id)
+    VALUES
+    <foreach collection="travels" item="travel" separator=" , ">
+      (#{travel}, #{generatedId})
+    </foreach>
+  </insert>
+
+  <resultMap id="FavoriteListResponseMap" type="FavoriteListResponse">
+    <result column="id" property="id"/>
+    <result column="title" property="title"/>
+    <result column="start_at" property="startAt"/>
+    <result column="end_at" property="endAt"/>
+    <result column="member_id" property="author"/>
+    <result column="visibility" property="visibility"/>
+  </resultMap>
+
+  <select id="getMyFavoriteList" parameterType="String" resultMap="FavoriteListResponseMap">
+    select id, title, start_at, end_at, member_id, visibility
+    from travel_board
+    where member_id = #{memberId}
+  </select>
+
+  <select id="getFavoriteList" parameterType="followInfoDto" resultMap="FavoriteListResponseMap">
+    select id, title, start_at, end_at, member_id, visibility
+    from travel_board
+    where visibility = 'public'
+      and member_id = #{follower}
+  </select>
+
+  <select id="option1" parameterType="followInfoDto" resultType="Int">
+    select count(*)
+    from partner
+    where follower_id = #{follower}
+      and following_id = #{following}
+  </select>
+
+  <select id="option2" parameterType="followInfoDto" resultType="Int">
+    select count(*)
+    from partner
+    where follower_id = #{following}
+      and following_id = #{follower}
+  </select>
+
+  <select id="getFavoriteMutual" parameterType="followInfoDto" resultMap="FavoriteListResponseMap">
+    select id, title, start_at, end_at, member_id, visibility
+    from travel_board
+    where visibility = 'mutual'
+      and member_id = #{follower}
+  </select>
+
+  <resultMap id="favoriteMap" type="FavoriteInfoRequest">
+    <result column="title" property="title"/>
+    <result column="start_at" property="startAt"/>
+    <result column="end_at" property="endAt"/>
+    <result column="member_id" property="memberId"/>
+  </resultMap>
+
+  <select id="getFavorite" parameterType="String" resultMap="favoriteMap">
+    select title, start_at, end_at, member_id
+    from travel_board
+    where id = #{boardId}
+  </select>
+
+  <select id="getTravelsId" parameterType="String" resultType="Integer">
+    select category_id
+    from matching_board
+    where board_id = #{boardId}
+  </select>
+
+  <resultMap id="TravelSearchResponseMap" type="TravelSearchResponse">
+    <result column="content_id" property="contentId"/>
+    <result column="title" property="title"/>
+    <result column="addr1" property="addr1"/>
+    <result column="addr2" property="addr2"/>
+    <result column="first_image" property="firstImage"/>
+    <result column="latitude" property="mapY"/>
+    <result column="longitude" property="mapX"/>
+  </resultMap>
+
+  <select id="getTravelInfo" parameterType="Integer" resultMap="TravelSearchResponseMap">
+    select content_id, title, addr1, addr2, first_image, latitude, longitude
+    from attraction_info
+    where content_id = #{contentId}
+  </select>
+
+</mapper>
